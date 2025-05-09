@@ -1,0 +1,38 @@
+.body{
+    margin: 0;
+    background-color: green;
+}
+.navbar{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background-color: rgb(112, 112, 238);
+}  
+
+.navbar-left{
+    padding-left: 20px;
+    
+}
+.navbar-right{
+    padding: 10px; 
+}
+
+
+
+.home{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+
+
+
+.home-left{
+    padding-top: 9px;
+    margin: 25px;
+}
+
+

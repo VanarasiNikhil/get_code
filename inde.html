@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-left">
+            <img src="https://res.cloudinary.com/dbzlvxfso/image/upload/v1738685198/vk-brush-stroke-letter-logo-design-black-paint-logo-leters-icon-vector-removebg-preview_mhzyeh.png">
+        </div>
+        
+    </div>
+    <div class="home">
+        
+        <div class="home-left">
+            <h1> "Fitness Red Counter"</h1>
+            <h2> CODE: </h2>
+            <p> #include  // add this "Wire.h"    in"<>" brackets.<br>
+                #include   // add this "Adafruit_GFX.h"   in"<>" brackets.<br>
+                #include  // add this "Adafruit_SSD1306.h"  in"<>" brackets.<br>
+                #include   // add this "Wifi.h" in "<>" brackets.<br>
+                #include  // add this "ThingSpeak.h" in "<>" brackets.<br>
+                <br>
+
+                // OLED Configuration<br>
+                #define SCREEN_WIDTH 128<br>
+                #define SCREEN_HEIGHT 64<br>
+                #define OLED_ADDR 0x3C<br>
+                Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);<br>
+                
+                <br>
+                // ThingSpeak Configuration<br>
+                #define CHANNEL_ID 2848464          // REPLACE WITH YOURS<br>
+                #define API_KEY "ZHSETCAD50WYX61M"      // REPLACE WITH YOURS<br>
+                #define WIFI_SSID "KARTHIK"    // REPLACE WITH YOUR WIFI_SSID<br>
+                #define WIFI_PASS "sidduanji"   //REPLACE WITH YOUR WIFI_PASSWORD<br>
+                <br>
+
+                // Ultrasonic Pins<br>
+                #define TRIG_PIN 5<br>
+                #define ECHO_PIN 18<br>
+                <br>
+
+                // Other Pins<br>
+                #define BUTTON_PIN 4<br>
+                #define BUZZER_PIN 23<br>
+                <br>
+                // Variables<br>
+                int counter = 0;<br>
+                bool lastButtonState = LOW;<br>
+                unsigned long lastDetectionTime = 0;<br>
+                const int detectionCooldown = 1000; // 1 second between reps<br>
+                WiFiClient client;<br>
+                <br>
+                void setup() {<br>
+                  Serial.begin(115200);<br>
+                  <br>
+                  // Initialize OLED<br>
+                  if(!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {<br>
+                    Serial.println("OLED failed");<br>
+                    while(1);<br>
+                  }<br>
+                  <br>
+
+                  // Initialize pins<br>
+                  pinMode(TRIG_PIN, OUTPUT);<br>
+                  pinMode(ECHO_PIN, INPUT);<br>
+                  pinMode(BUTTON_PIN, INPUT);<br>
+                  pinMode(BUZZER_PIN, OUTPUT);<br>
+                
+                  <br>
+                  // Connect to WiFi<br>
+                  WiFi.begin(WIFI_SSID, WIFI_PASS);<br>
+                  while (WiFi.status() != WL_CONNECTED) {<br>
+                    delay(500);<br>
+                    Serial.print(".");<br>
+                  }<br>
+                  Serial.println("\nWiFi Connected!");<br>
+                  ThingSpeak.begin(client);<br>
+                
+                  <br>
+                  // Show startup screen<br>
+                  display.clearDisplay();<br>
+                  display.setTextSize(2);<br>
+                  display.setTextColor(WHITE);<br>
+                  display.setCursor(20, 20);<br>
+                  display.println("FITNESS");<br>
+                  display.setCursor(30, 40);<br>
+                  display.println("COUNTER");<br>
+                  display.display();<br>
+                  delay(2000);<br>
+                  
+                  updateDisplay();<br>
+                }<br>
+                
+                <br>
+                void loop() {<br>
+                  // Ultrasonic detection<br>
+                  long duration = getDistance();<br>
+                  int distance = duration * 0.034 / 2; // Convert to cm<br>
+                  <br>
+                  // Detect rep when object is within 10-30cm range<br>
+                  if (distance > 10 && distance < 30 && millis() - lastDetectionTime > detectionCooldown) {<br>
+                    countRep();<br>
+                    lastDetectionTime = millis();<br>
+                  }<br>
+                
+                  <br>
+                  // Button detection<br>
+                  bool currentButtonState = digitalRead(BUTTON_PIN);<br>
+                  if (currentButtonState == HIGH && lastButtonState == LOW) {<br>
+                    countRep();<br>
+                    delay(200); // Debounce<br>
+                  }<br>
+                  lastButtonState = currentButtonState;<br>
+                }<br>
+                
+                <br>
+                long getDistance() {<br>
+                  digitalWrite(TRIG_PIN, LOW);<br>
+                  delayMicroseconds(2);<br>
+                  digitalWrite(TRIG_PIN, HIGH);<br>
+                  delayMicroseconds(10);<br>
+                  digitalWrite(TRIG_PIN, LOW);<br>
+                  return pulseIn(ECHO_PIN, HIGH);<br>
+                }<br>
+                
+                <br>
+                void countRep() {<br>
+                  counter++;<br>
+                  Serial.println("Rep: " + String(counter));<br>
+                  <br>
+                  // Update display<br>
+                  updateDisplay();<br>
+                  <br>
+                  // Buzzer feedback<br>
+                  digitalWrite(BUZZER_PIN, HIGH);<br>
+                  delay(50);<br>
+                  digitalWrite(BUZZER_PIN, LOW);<br>
+                  <br>
+                  // Send to ThingSpeak<br>
+                  ThingSpeak.setField(1, counter);<br>
+                  int status = ThingSpeak.writeFields(CHANNEL_ID, API_KEY);<br>
+                  if (status == 200) {<br>
+                    Serial.println("ThingSpeak update success");<br>
+                  } else {<br>
+                    Serial.println("ThingSpeak error: " + String(status));<br>
+                  }<br>
+                }<br>
+                
+                <br>
+                void updateDisplay() {<br>
+                  display.clearDisplay();<br>
+                  display.setTextSize(3);<br>
+                  display.setCursor(10, 10);<br>
+                  display.println("REPS:");<br>
+                  display.setTextSize(4);<br>
+                  display.setCursor(40, 40);<br>
+                  display.println(counter);<br>
+                  display.display();<br>
+                  <br>
+                  <br>
+                } <br>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
